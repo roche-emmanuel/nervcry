@@ -1,0 +1,31 @@
+CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
+
+# The name of this project:
+PROJECT(NERVCRY)
+SET(PROJECT_VERSION 1.0)
+
+# Include the config:
+INCLUDE(cmake/Config.cmake)
+
+IF(NOT DEFINED FLAVOR)
+	MESSAGE(FATAL_ERROR "Flavor was not provided!")
+	# SET(FLAVOR win32)	
+ENDIF()
+
+SET(CMAKE_MODULE_PATH "cmake ${CMAKE_MODULE_PATH}")
+
+# Use the "d" postfix for debug binaries
+SET(CMAKE_DEBUG_POSTFIX "d")
+
+
+STRING(TOUPPER "${FLAVOR}" UPPER_FLAVOR)
+ADD_DEFINITIONS("-D${UPPER_FLAVOR}")
+ADD_DEFINITIONS("-D_FILE_OFFSET_BITS=64")
+
+IF(MSVC)	
+	ADD_DEFINITIONS(-DCXX_ENABLED) # only on MSVC
+ENDIF()
+
+ADD_SUBDIRECTORY(sources)
+
+

@@ -1,0 +1,165 @@
+
+*** http://source.crydev.net/viewtopic.php?f=325&t=94941 
+*** http://www.crydev.net/viewtopic.php?f=373&t=77681
+*** http://www.crydev.net/viewtopic.php?f=314&t=76779&p=1043409&hilit=blue#p1043409
+
+
+auto texture = gEnv->pRenderer->EF_LoadTexture(path);
+gEnv->pRenderer->Draw2dImage(xpos, ypos, width, height, texture->GetTextureID());
+
+=> Check IRenderer
+	virtual unsigned int DownLoadToVideoMemory(unsigned char *data,int w, int h, ETEX_Format eTFSrc, ETEX_Format eTFDst, int nummipmap, bool repeat=true, int filter=FILTER_BILINEAR, int Id=0, const char *szCacheName=NULL, int flags=0, EEndian eEndian = eLittleEndian, RectI * pRegion = NULL, bool bAsynDevTexCreation = false)=0;
+	virtual void UpdateTextureInVideoMemory(uint32 tnum, unsigned char *newdata,int posx,int posy,int w,int h,ETEX_Format eTFSrc=eTF_R8G8B8)=0; 
+
+
+
+*** http://www.crydev.net/viewtopic.php?f=283&t=65635
+
+camOrigin = gEnv->pSystem->GetViewCamera(); //first save the curren camera
+gEnv->pSystem->RenderBegin(); //let the framework know that it will start with the rendering
+pRenderer->SetCamera(camViewport[0]); //set a new cam
+gEnv->p3DEngine->RenderWorld(pRenderer->GetRenderType(), pRenderer->GetCamera(), "cam_try1", -1, FILTER_LINEAR ); //render the world to the framebuffer
+pRenderer->ReadFrameBufferFast(uTexSource[0],  iWidth, iHeight); //read the framebuffer
+pRenderer->SetCamera(camOrigin); //dosnt know if its nexessary - for some reason ive deactivated it... the code is full of changes because of try and error ^^
+gEnv->pSystem->RenderBegin(); //let the framework know that it can do what it want to do ^^
+
+
+
+*** http://stackoverflow.com/questions/7194452/fast-vectorized-conversion-from-rgb-to-bgra
+
+int i,j;
+int picptr, srcptr;
+int w = 1920;
+int h = 1080;
+
+for (j=0; j<h; j++) {
+    for (i=0; i<w; i++) {
+        buff[picptr++]=(diskmem[srcptr]<<24) | (diskmem[srcptr+1]<<16) | diskmem[srcptr+2]<<8 | 0xff;
+        srcptr+=3;
+    }
+}
+
+
+
+*** http://www.magpcss.org/ceforum/viewtopic.php?f=6&t=11396
+
+void SwapBufferFromBgraToRgba(void* _dest, const void* _src, int width, \
+        int height) {
+  int32_t* dest = (int32_t*)_dest;
+  int32_t* src = (int32_t*)_src;
+  int32_t rgba;
+  int32_t bgra;
+  int length = width*height;
+  for (int i = 0; i < length; i++) {
+    bgra = src[i];
+    // BGRA in hex = 0xAARRGGBB.
+    rgba = (bgra & 0x00ff0000) >> 16 // Red >> Blue.
+           | (bgra & 0xff00ff00) // Green Alpha.
+           | (bgra & 0x000000ff) << 16; // Blue >> Red.
+    dest[i] = rgba;
+  }
+}
+
+*** http://www.magpcss.org/ceforum/viewtopic.php?f=8&t=11635
+=> CEF and chromium accelerated OSR support.
+
+CRenderTarget -> CryRenderTarget -> CryDX11RenderTarget
+
+
+*** Creating a texture:
+
+  // Here we try to create a simple texture using the global renderer object:
+  gEnv->pLog->Log( PLUGIN_CONSOLE_PREFIX " Retrieving renderer..." );
+  IRenderer* renderer = gEnv->pRenderer;
+  if(!renderer) {
+      gEnv->pLog->Log( PLUGIN_CONSOLE_PREFIX " Invalid renderer object." );
+      return;
+  }
+
+  // Now we prepare the texture data:
+  // unsigned char data[64] = { 
+  //     255, 255, 0, 0, 128, 255, 0, 0, 64, 255, 0, 0, 32, 255, 0, 0,
+  //     0, 255, 0, 255, 128, 0, 255, 0, 64, 0, 255, 0, 32, 0, 255, 0,
+  //     0, 0, 255, 255, 128, 0, 0, 255, 64, 0, 0, 255, 32, 0, 0, 255,
+  //     255, 255, 255, 0, 128, 255, 255, 0, 64, 255, 255, 0, 32, 255, 255, 0
+  //  };
+  // unsigned char data[64] = { 
+  //     255, 255, 0, 0, 128, 255, 0, 0, 64, 255, 0, 0, 32, 255, 0, 0,
+  //     255, 0, 255, 0, 128, 0, 255, 0, 64, 0, 255, 0, 32, 0, 255, 0,
+  //     255, 0, 0, 255, 128, 0, 0, 255, 64, 0, 0, 255, 32, 0, 0, 255,
+  //     255, 255, 255, 0, 128, 255, 255, 0, 64, 255, 255, 0, 32, 255, 255, 0
+  //  };
+  unsigned char data[64] = { 
+      255, 0, 0, 255, 255, 0, 0, 128, 255, 0, 0, 64, 255, 0, 0, 32,
+      0, 255, 0, 255, 0, 255, 0, 128, 0, 255, 0, 64, 0, 255, 0, 32,
+      0, 0, 255, 255, 0, 0, 255, 128, 0, 0, 255, 64, 0, 0, 255, 32,
+      255, 255, 0, 255, 255, 255, 0, 128, 255, 255, 0, 64, 255, 255, 0, 32 
+   };
+
+  gEnv->pLog->Log( PLUGIN_CONSOLE_PREFIX " Download texture to video memory..." );
+
+  //SF_CreateTexture(int width, int height, int numMips, unsigned char* pData, ETEX_Format eTF, int flags)
+  // int id = renderer->SF_CreateTexture(4, 4,0, data, eTF_A8R8G8B8, 0);
+  // ITexture* tex = renderer->EF_GetTextureByID(id);
+  // if(!tex) {
+  //     gEnv->pLog->Log( PLUGIN_CONSOLE_PREFIX " Invalid texture created with SF_CreateTexture." );
+  //     return;
+  // }
+
+  // _texId = tex->GetTextureID();
+
+  // _texId = renderer->DownLoadToVideoMemory(data, 4, 4, eTF_A8R8G8B8, eTF_A8R8G8B8, 0, false, FILTER_POINT);
+
+  ITexture* pCryTex = gD3DSystem->CreateTexture(&_texture, 4, 4, 1, eTF_A8R8G8B8, FT_USAGE_DYNAMIC);
+  _texId = pCryTex->GetTextureID();
+
+  // gEnv->pLog->Log( PLUGIN_CONSOLE_PREFIX " Download completed. Retrieved ID= %d and texture ID=%d", id, _texId );
+  gEnv->pLog->Log( PLUGIN_CONSOLE_PREFIX " Download completed. Retrieved texture ID=%d", _texId );
+
+
+**** Rendering HUD texture:
+
+  if(_texId) {
+
+      // Try injecting some new test data on the texture:
+      unsigned char newdata[16] = {
+          255, 255, 255, 128, 255, 255, 255, 128, 255, 255, 255, 128, 255, 255, 255, 128
+      };
+
+      gEnv->pLog->Log( PLUGIN_CONSOLE_PREFIX " Updating sub image...");
+      gEnv->pRenderer->UpdateTextureInVideoMemory(_texId, newdata, 2, 2, 2, 2, eTF_A8R8G8B8);
+
+
+      // int ww = gEnv->pRenderer->GetWidth();
+      // int hh = gEnv->pRenderer->GetHeight();
+
+      // gEnv->pLog->Log( PLUGIN_CONSOLE_PREFIX " Rendering texture as image on screen %d*%d",ww,hh );
+      
+      //void  Draw2dImage(float xpos,float ypos,float w,float h,int texture_id,float s0=0,float t0=0,float s1=1,float t1=1,float angle=0,float r=1,float g=1,float b=1,float a=1,float z=1)=0;
+      // gEnv->pRenderer->Draw2dImage(10.0f,10.0f,ww-20.0f,hh-20.0f,_texId);
+      // gEnv->pRenderer->Draw2dImage(10.0f,10.0f,800 - 20.0f, 600 - 20.0f,_texId);
+      gEnv->pRenderer->Draw2dImage(0.0f,0.0f,800, 600,_texId);
+
+      // It seems that at this point the size of the screen is always considered to be 800x600.
+      // This was already reported in http://source.crydev.net/viewtopic.php?f=314&t=122373
+      // But the suggested fix implemented below doesn't seem to work. So we will jsut work with
+      // the dimensions 800x600 for now. (Note that this is NOT related to the actual rendering resolution which can
+      // be much higher !)
+
+      // IUIDraw* pUIDraw = gEnv->pGame->GetIGameFramework()->GetIUIDraw();
+      // pUIDraw->PreRender();
+
+      // void DrawImage(int iTextureID,float fX,
+      //                                                                     float fY,
+      //                                                                     float fSizeX,
+      //                                                                     float fSizeY,
+      //                                                                     float fAngleInDegrees,
+      //                                                                     float fRed,
+      //                                                                     float fGreen,
+      //                                                                     float fBlue,
+      //                                                                     float fAlpha,
+      // pUIDraw->DrawImage(_texId,10.0f,10.0f,ww-20.0f,hh-20.0f,0.0,1.0,1.0,1.0,1.0);
+      // pUIDraw->PostRender();
+
+      // gEnv->pLog->Log( PLUGIN_CONSOLE_PREFIX " Done rendering texture." );
+  }
