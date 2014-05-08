@@ -78,13 +78,11 @@ void CCEFSystem::OnPostUpdate( float fDeltaTime )
     // Render the HUD views:
     for(ViewList::iterator it = _views.begin(); it != _views.end(); ++it) {
         if((*it)->IsHUDView()) {
-            logDEBUG("Rendering HUD view");
+            // logDEBUG("Rendering HUD view");
             (*it)->RenderHUD();
-            logDEBUG("HUD View Rendered.");
+            // logDEBUG("HUD View Rendered.");
         }
     }
-
-
 }
 
 void CCEFSystem::OnPreRender()

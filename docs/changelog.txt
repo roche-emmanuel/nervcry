@@ -1,3 +1,4 @@
 == NervCry release v1.0.0 - ??? ==
 
 - Initial commit
+- Added support for URL specification in HUDView flownode.

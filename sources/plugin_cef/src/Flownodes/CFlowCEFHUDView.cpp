@@ -19,6 +19,9 @@ namespace CEFPlugin
             EIP_START = 0,
             //Delete the view and release the texture
             EIP_RELEASE,
+            EIP_WIDTH,
+            EIP_HEIGHT,
+            EIP_TOURL,                        
         };
 
         enum EOutputPorts
@@ -57,6 +60,9 @@ namespace CEFPlugin
             {
                 InputPortConfig_Void( "Start", _HELP( "Create and begin updating the view." ) ),
                 InputPortConfig_Void( "Release", _HELP( "Shutdown and release the view" ) ),
+                InputPortConfig<int>( "Width", -1, _HELP( "Width of the view" ) ),
+                InputPortConfig<int>( "Height", -1, _HELP( "Height of the view" ) ),   
+                InputPortConfig<string>( "URL", "http://www.google.fr", _HELP( "Go to a URL" ), NULL, NULL ),             
                 InputPortConfig_Null(),
             };
 
@@ -69,7 +75,7 @@ namespace CEFPlugin
 
             config.pInputPorts = inputs;
             config.pOutputPorts = outputs;
-            config.sDescription = _HELP( "Instance of a WebView" );
+            config.sDescription = _HELP( "Instance of a CEF View" );
 
             config.SetCategory( EFLN_APPROVED );
         }
@@ -91,9 +97,22 @@ namespace CEFPlugin
 
             if ( IsPortActive( pActInfo, EIP_START ) && !_view.get())
             {
-                //_view = new CCryView(1024,1024);
+                // Retrieve the current input values:
+                int ww = GetPortInt( pActInfo, EIP_WIDTH );
+                int hh = GetPortInt( pActInfo, EIP_HEIGHT );
 
-                _view = _sys->CreateView(1024,1024); //(CCEFViewBase*)(_view.get())
+                if(ww=-1) {
+                    ww = gEnv->pRenderer->GetWidth();
+                    logDEBUG("Using renderer width: " << ww);
+                }
+                if(hh==-1) {
+                    hh = gEnv->pRenderer->GetHeight();       
+                    logDEBUG("Using renderer height: " << hh);
+                }
+                  
+                std::string url = GetPortString( pActInfo, EIP_TOURL );
+
+                _view = _sys->CreateView(ww,hh,url);
                 logDEBUG("Flownode view created.");
                 ActivateOutput<bool>( pActInfo, EOP_STARTED, true);
             }

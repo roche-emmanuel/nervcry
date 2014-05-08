@@ -23,7 +23,7 @@ void CRenderHandler::OnPaint(CefRefPtr<CefBrowser> browser, PaintElementType typ
 	logDEBUG("Calling OnPaint.");
 	CHECK(_renderTarget.get(),"Invalid render target object.")
 	CHECK(width==_renderTarget->GetWidth(),"Buffer width doesn't match render target: " << width << "!=" << _renderTarget->GetWidth());
-	CHECK(width==_renderTarget->GetHeight(),"Buffer height doesn't match render target: " << height << "!=" << _renderTarget->GetHeight());
+	CHECK(height==_renderTarget->GetHeight(),"Buffer height doesn't match render target: " << height << "!=" << _renderTarget->GetHeight());
 
 	if(dirtyRects.empty()) {
 		logWARN("No dirty rect to paint!");
