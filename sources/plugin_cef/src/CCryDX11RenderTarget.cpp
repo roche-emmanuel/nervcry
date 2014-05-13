@@ -31,6 +31,8 @@ void CCryDX11RenderTarget::PaintRects(const CefRenderHandler::RectList &dirtyRec
 	D3D11_MAPPED_SUBRESOURCE mapped;
 	CHECK_RESULT(pContext->Map( _texture.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped ),"Cannot map DX11 texture.");
 
+#if 0
+  // Non optimized copy operation.
 	char* pSrc = (char*)buffer;
 	char* pDest = static_cast<char*>( mapped.pData );
 
@@ -52,6 +54,26 @@ void CCryDX11RenderTarget::PaintRects(const CefRenderHandler::RectList &dirtyRec
 
     offsetDst += rowOffset;	
   }
+#else
+  unsigned char* pSrc = (unsigned char*)buffer;
+  boost::uint32_t* pDest = static_cast<boost::uint32_t*>( mapped.pData );
+
+  int rowOffset = (mapped.RowPitch % _width)/4;
+
+  for ( int row = 0; row < _height; ++row )
+  {
+    for ( int col = 0; col < _width; ++col )
+    {
+      // *pDest++ = (*pSrc++) << 16 | (*pSrc++) << 8 | (*pSrc++) | (*pSrc++) << 24; // We need to take into account the endianless here!
+
+      // *pDest++ = (pSrc[0]) << 8 | (pSrc[1]) << 16 | (pSrc[2]) << 24 | (pSrc[3]);
+      *pDest++ = (pSrc[0]) << 16 | (pSrc[1]) << 8 | (pSrc[2]) | (pSrc[3]) << 24; // We need to take into account the endianless here!
+      pSrc+=4;
+    }
+ 
+    pDest += rowOffset; 
+  }
+#endif
 
 	pContext->Unmap( _texture.Get(), 0 );
 #else
@@ -69,10 +91,13 @@ void CCryDX11RenderTarget::PaintRects(const CefRenderHandler::RectList &dirtyRec
     box.back=1;
 
     tmpBuffer = new unsigned char[rect.width*rect.height*4];
-    unsigned char* dest = tmpBuffer;
     unsigned char* src = (unsigned char*)buffer;
     src += rect.y*_width*4 + rect.x*4;
     int srcRowOffset = (_width - rect.width)*4;
+
+#if 0
+    // Non optimized copy operation.
+    unsigned char* dest = tmpBuffer;
 
     for(int r=0;r<rect.height;++r) {
     	for(int c=0;c<rect.width;++c) {
@@ -84,6 +109,16 @@ void CCryDX11RenderTarget::PaintRects(const CefRenderHandler::RectList &dirtyRec
     	}
     	src += srcRowOffset;
     }
+#else
+    boost::uint32_t* dest = (boost::uint32_t*)tmpBuffer;
+    for(int r=0;r<rect.height;++r) {
+      for(int c=0;c<rect.width;++c) {
+        *dest++ = (src[0]) << 16 | (src[1]) << 8 | (src[2]) | (src[3]) << 24; 
+        src+=4;
+      }
+      src += srcRowOffset;
+    }
+#endif
 
     logDEBUG("Calling Update Subresource with rect x="<<rect.x<<", y="<<rect.y<<", srcW="<<rect.width<<", srcH="<<rect.height);
 		pContext->UpdateSubresource(_texture.Get(), 0, &box, (void*)tmpBuffer,rect.width*4,0);
